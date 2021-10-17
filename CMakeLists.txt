@@ -28,13 +28,12 @@ if(NOT ANDROID)
   option(BUILD_REGTEST "Build regression test runner" OFF)
   option(ENABLE_DISCORD_PRESENCE "Build with Discord Rich Presence support" ON)
   option(ENABLE_CHEEVOS "Build with RetroAchievements support" ON)
-  option(USE_SDL2 "Link with SDL2 for controller support" ON)
 endif()
 
 
 # OpenGL context creation methods.
 if(SUPPORTS_X11)
-  option(USE_X11 "Support X11 window system" ON)
+  option(USE_X11 "Support X11 window system" OFF)
 endif()
 if(SUPPORTS_WAYLAND)
   option(USE_WAYLAND "Support Wayland window system" OFF)
@@ -51,34 +50,6 @@ endif()
 # Force EGL when using Wayland
 if(USE_WAYLAND)
   set(USE_EGL ON)
-endif()
-
-if(ANDROID)
-  if(BUILD_NOGUI_FRONTEND)
-    message(WARNING "Building for Android, disabling NoGUI frontend")
-    set(BUILD_NOGUI_FRONTEND OFF)
-  endif()
-  if(BUILD_QT_FRONTEND)
-    message(WARNING "Building for Android, disabling Qt frontend")
-    set(BUILD_QT_FRONTEND OFF)
-  endif()
-  if(ENABLE_DISCORD_PRESENCE)
-    message("Building for Android, disabling Discord Presence support")
-    set(ENABLE_DISCORD_PRESENCE OFF)
-  endif()
-  if(USE_SDL2)
-    message("Building for Android, disabling SDL2 support")
-    set(USE_SDL2 OFF)
-  endif()
-  if(USE_X11)
-    set(USE_X11 OFF)
-  endif()
-  if(USE_WAYLAND)
-    set(USE_WAYLAND OFF)
-  endif()
-
-  # Cheevos are always on.
-  set(ENABLE_CHEEVOS ON)
 endif()
 
 
@@ -116,33 +87,7 @@ if(BUILD_LIBRETRO_CORE)
 endif()
 
 
-# Common include/library directories on Windows.
-if(WIN32 AND USE_SDL2)
-  set(SDL2_FOUND TRUE)
-  set(SDL2_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/dep/msvc/sdl2/include")
-  if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(SDL2_LIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/dep/msvc/sdl2/lib64/SDL2.lib")
-    set(SDL2MAIN_LIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/dep/msvc/sdl2/lib64/SDL2main.lib")
-    set(SDL2_DLL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/dep/msvc/sdl2/bin64/SDL2.dll")
-    set(Qt5_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dep/msvc/qt/5.15.0/msvc2017_64/lib/cmake/Qt5")
-  else()
-    set(SDL2_LIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/dep/msvc/sdl2/lib32/SDL2.lib")
-    set(SDL2MAIN_LIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/dep/msvc/sdl2/lib32/SDL2main.lib")
-    set(SDL2_DLL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/dep/msvc/sdl2/bin32/SDL2.dll")
-    set(Qt5_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dep/msvc/qt/5.15.0/msvc2017_32/lib/cmake/Qt5")
-  endif()
-endif()
 
-
-# Required libraries.
-if(NOT ANDROID)
-  if(NOT WIN32 AND USE_SDL2)
-    find_package(SDL2 REQUIRED)
-  endif()
-  if(BUILD_QT_FRONTEND)
-    find_package(Qt5 COMPONENTS Core Gui Widgets Network LinguistTools REQUIRED)
-  endif()
-endif()
 
 if(USE_EGL)
   find_package(EGL REQUIRED)
@@ -224,18 +169,6 @@ if(MSVC)
 endif()
 
 
-# Default symbol visibility to hidden, that way we don't go through the PLT for intra-library calls.
-if(ANDROID OR BUILD_LIBRETRO_CORE)
-  set(CMAKE_C_VISIBILITY_PRESET hidden)
-  set(CMAKE_CXX_VISIBILITY_PRESET hidden)
-
-  # -fno-semantic-interposition appears to be broken on Macs... of course.
-  if((CMAKE_COMPILER_IS_GNUCC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang") AND NOT APPLE AND NOT ANDROID)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-semantic-interposition")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-semantic-interposition")
-  endif()
-endif()
-
 
 # Detect C++ version support.
 set(CMAKE_CXX_STANDARD 17)
@@ -251,6 +184,8 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     endif()
 endif()
 
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -sUSE_SDL=2")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -sUSE_SDL=2")
 
 # Detect processor type.
 if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64" OR ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "amd64" OR
